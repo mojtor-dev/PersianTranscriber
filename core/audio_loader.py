@@ -5,6 +5,8 @@ Version: 0.1.0
 
 import os
 
+from core.models import AudioInfo
+
 
 class AudioLoader:
 
@@ -31,3 +33,15 @@ class AudioLoader:
         if self.exists():
             return os.path.getsize(self.file_path)
         return 0
+
+    def load_info(self):
+
+        if not self.exists():
+            return None
+
+        return AudioInfo(
+            file_name=os.path.basename(self.file_path),
+            file_path=self.file_path,
+            extension=self.get_extension(),
+            size=self.get_size()
+        )
