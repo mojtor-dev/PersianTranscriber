@@ -3,13 +3,14 @@ PersianTranscriber Engine
 Version: 0.1.0
 """
 
-from core.engines.whisper import WhisperEngine
+from core.engine_manager import EngineManager
 
 
 class TranscriberEngine:
 
     def __init__(self):
-        self.engine = WhisperEngine()
+        self.manager = EngineManager()
+        self.engine = self.manager.get_engine()
 
     def load_model(self):
 
