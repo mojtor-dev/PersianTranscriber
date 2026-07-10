@@ -14,9 +14,11 @@ class EngineManager:
         self.config = ConfigLoader()
 
         self.engines = {
-            "whisper": WhisperEngine()
-        }
-
+    "whisper": WhisperEngine(
+        model=self.config.get_model(),
+        language=self.config.get_language()
+    )
+}
     def get_engine(self):
 
         name = self.config.get_engine_name()
