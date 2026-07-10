@@ -7,6 +7,7 @@ from core.audio_loader import AudioLoader
 from core.transcriber import TranscriberEngine
 from core.cleaner import TextCleaner
 from core.docx_exporter import DocxExporter
+from core.text_exporter import TextExporter
 
 
 class TranscriptionPipeline:
@@ -15,6 +16,7 @@ class TranscriptionPipeline:
         self.transcriber = TranscriberEngine()
         self.cleaner = TextCleaner()
         self.exporter = DocxExporter()
+        self.text_exporter = TextExporter()
 
     def run(self, audio_path):
 
@@ -31,6 +33,10 @@ class TranscriptionPipeline:
 
         clean_text = self.cleaner.clean(
             result["text"]
+        )
+
+        self.text_exporter.save_text(
+            clean_text
         )
 
         output = self.exporter.save_docx(
