@@ -3,25 +3,56 @@ PersianTranscriber Logger
 Version: 0.1.0
 """
 
-import logging
 import os
 from datetime import datetime
 
-import config
 
+class AppLogger:
 
-def get_logger():
-    os.makedirs(config.DEFAULT_LOG_FOLDER, exist_ok=True)
+    def __init__(self):
 
-    log_file = os.path.join(
-        config.DEFAULT_LOG_FOLDER,
-        f"app_{datetime.now().strftime('%Y%m%d')}.log"
-    )
+        self.log_dir = "logs"
 
-    logging.basicConfig(
-        filename=log_file,
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(message)s"
-    )
+        os.makedirs(
+            self.log_dir,
+            exist_ok=True
+        )
 
-    return logging.getLogger("PersianTranscriber")
+        self.file = os.path.join(
+            self.log_dir,
+            "session.log"
+        )
+
+    def write(self, message):
+
+        time = datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+        with open(
+            self.file,
+            "a",
+            encoding="utf-8"
+        ) as f:
+
+            f.write(
+                f"[{time}] {message}\n"
+            )
+
+    def start(self, file):
+
+        self.write(
+            f"START file={file}"
+        )
+
+    def finish(self, output):
+
+        self.write(
+            f"COMPLETE output={output}"
+        )
+
+    def error(self, error):
+
+        self.write(
+            f"ERROR {error}"
+        )
