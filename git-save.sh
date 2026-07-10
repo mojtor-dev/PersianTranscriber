@@ -3,20 +3,21 @@
 MESSAGE="$1"
 
 if [ -z "$MESSAGE" ]; then
-    echo "Please provide commit message"
+    echo "Commit message missing"
     exit 1
 fi
 
-echo "Checking status..."
-git status
+echo "Checking changes..."
 
-echo "Adding changes..."
+if [ -z "$(git status --porcelain)" ]; then
+    echo "No changes to commit"
+    exit 0
+fi
+
 git add .
 
-echo "Committing..."
 git commit -m "$MESSAGE"
 
-echo "Pushing..."
 git push origin $(git branch --show-current)
 
-echo "Done!"
+echo "Save completed successfully"
