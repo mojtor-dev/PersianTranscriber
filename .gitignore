@@ -29,3 +29,5 @@ tools/whisper.cpp/build/
 
 # Test files
 test_*
+
+output/*.txt

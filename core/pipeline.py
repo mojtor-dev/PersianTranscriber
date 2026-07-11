@@ -10,7 +10,7 @@ from core.docx_exporter import DocxExporter
 from core.text_exporter import TextExporter
 from core.logger import AppLogger
 from core.progress import ProgressManager
-
+from core.dictionary_engine import DictionaryEngine
 
 class TranscriptionPipeline:
 
@@ -20,6 +20,7 @@ class TranscriptionPipeline:
         self.cleaner = TextCleaner()
         self.exporter = DocxExporter()
         self.text_exporter = TextExporter()
+        self.dictionary = DictionaryEngine()
         self.logger = AppLogger()
         self.progress = ProgressManager()
 
@@ -76,7 +77,9 @@ class TranscriptionPipeline:
             result["text"]
         )
 
-
+        clean_text = self.dictionary.correct(
+    clean_text
+)
         self.progress.update(
             95,
             "Saving output"
