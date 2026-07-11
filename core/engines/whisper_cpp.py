@@ -1,10 +1,11 @@
 """
 PersianTranscriber Whisper.cpp Engine
-Version: 0.3.0
+Version: 0.4.0
 """
 
 import subprocess
 import os
+
 from core.config_loader import ConfigLoader
 
 
@@ -55,14 +56,35 @@ class WhisperCppEngine:
     def transcribe(self, audio_path):
 
         command = [
+
             self.whisper_bin,
+
             "-m",
             self.model_path,
+
             "-f",
             audio_path,
+
             "-l",
-            self.language
+            self.language,
+
+            # افزایش دقت
+            "-bs",
+            "8",
+
+            # استفاده بهتر از CPU
+            "-t",
+            "6",
+
+            # کاهش خطای تشخیص
+            "--temperature",
+            "0",
+
+            # خروجی بدون ترجمه
+            "-nt"
+
         ]
+
 
         result = subprocess.run(
             command,
@@ -70,9 +92,15 @@ class WhisperCppEngine:
             text=True
         )
 
+
         return {
+
             "text": result.stdout,
+
             "file": audio_path,
+
             "model": self.model,
+
             "language": self.language
+
         }
