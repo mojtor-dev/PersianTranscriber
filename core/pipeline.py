@@ -1,29 +1,31 @@
 """
 PersianTranscriber Pipeline
+
 Version: 0.1.0
 """
 
 from core.audio_loader import AudioLoader
 from core.transcriber import TranscriberEngine
 from core.cleaner import TextCleaner
+from core.persian_normalizer import PersianNormalizer
 from core.docx_exporter import DocxExporter
 from core.text_exporter import TextExporter
 from core.logger import AppLogger
 from core.progress import ProgressManager
 from core.dictionary_engine import DictionaryEngine
 
+
 class TranscriptionPipeline:
 
     def __init__(self):
-
         self.transcriber = TranscriberEngine()
         self.cleaner = TextCleaner()
+        self.normalizer = PersianNormalizer()
         self.exporter = DocxExporter()
         self.text_exporter = TextExporter()
         self.dictionary = DictionaryEngine()
         self.logger = AppLogger()
         self.progress = ProgressManager()
-
 
     def run(self, audio_path):
 
@@ -46,9 +48,7 @@ class TranscriptionPipeline:
 
             return None
 
-
         audio_info = loader.load_info()
-
 
         self.progress.update(
             40,
@@ -56,7 +56,6 @@ class TranscriptionPipeline:
         )
 
         self.transcriber.load_model()
-
 
         self.progress.update(
             70,
@@ -67,7 +66,6 @@ class TranscriptionPipeline:
             audio_info
         )
 
-
         self.progress.update(
             85,
             "Cleaning text"
@@ -77,9 +75,14 @@ class TranscriptionPipeline:
             result["text"]
         )
 
+        clean_text = self.normalizer.normalize(
+            clean_text
+        )
+
         clean_text = self.dictionary.correct(
-    clean_text
-)
+            clean_text
+        )
+
         self.progress.update(
             95,
             "Saving output"
@@ -93,12 +96,10 @@ class TranscriptionPipeline:
             clean_text
         )
 
-
         self.logger.finish(
             output
         )
 
         self.progress.finish()
-
 
         return output

@@ -4,13 +4,13 @@ Main Application
 """
 
 import config
-from core.logger import get_logger
+from core.logger import AppLogger
 
 
 def main():
-    logger = get_logger()
+    logger = AppLogger()
 
-    logger.info("Application started")
+    logger.write("Application started")
 
     print("=" * 40)
     print(config.APP_NAME)
@@ -20,7 +20,7 @@ def main():
     print("Core initialized successfully")
     print("=" * 40)
 
-    logger.info("Application initialized successfully")
+    logger.write("Application initialized successfully")
 
 
 if __name__ == "__main__":
