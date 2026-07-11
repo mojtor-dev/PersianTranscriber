@@ -34,6 +34,13 @@ class TestPersianNormalizer(unittest.TestCase):
             "سال ۲۰۲۶ و شماره ۱۲۳",
         )
 
+    def test_preserves_english_digits(self):
+        text = "Version 123"
+
+        result = self.normalizer.normalize(text)
+
+        self.assertEqual(result, "Version 123")
+
     def test_removes_tatweel(self):
         text = "متــــن آزمایشی"
 
@@ -66,6 +73,26 @@ class TestPersianNormalizer(unittest.TestCase):
         self.assertEqual(
             result,
             "کتاب‌ها بهترین منبع‌ها هستند.",
+        )
+
+    def test_normalizes_pronoun_suffixes_after_heh(self):
+        text = "خانه ام بزرگ است و نامه اش را خواندم."
+
+        result = self.normalizer.normalize(text)
+
+        self.assertEqual(
+            result,
+            "خانه‌ام بزرگ است و نامه‌اش را خواندم.",
+        )
+
+    def test_normalizes_multiple_pronoun_suffixes_after_heh(self):
+        text = "درباره ات گفتم و برنامه مان آماده است."
+
+        result = self.normalizer.normalize(text)
+
+        self.assertEqual(
+            result,
+            "درباره‌ات گفتم و برنامه‌مان آماده است.",
         )
 
     def test_normalizes_punctuation_spacing(self):

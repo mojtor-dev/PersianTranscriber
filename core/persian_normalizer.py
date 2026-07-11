@@ -45,6 +45,15 @@ class PersianNormalizer:
         "ترین",
     )
 
+    PRONOUN_SUFFIXES_AFTER_HEH = (
+        "ام",
+        "ات",
+        "اش",
+        "مان",
+        "تان",
+        "شان",
+    )
+
     def normalize(self, text: str) -> str:
         """
         متن فارسی را با قواعد پایه نرمال می‌کند.
@@ -62,6 +71,7 @@ class PersianNormalizer:
         text = self._normalize_punctuation_spacing(text)
         text = self._normalize_prefixes(text)
         text = self._normalize_suffixes(text)
+        text = self._normalize_pronoun_suffixes_after_heh(text)
         text = self._normalize_whitespace(text)
 
         return text.strip()
@@ -130,6 +140,21 @@ class PersianNormalizer:
 
         return re.sub(
             rf"([آ-ی]+)\s+({suffixes_pattern})(?!\S)",
+            rf"\1{self.ZWNJ}\2",
+            text,
+        )
+
+    def _normalize_pronoun_suffixes_after_heh(
+        self,
+        text: str,
+    ) -> str:
+        pronoun_suffixes_pattern = "|".join(
+            re.escape(suffix)
+            for suffix in self.PRONOUN_SUFFIXES_AFTER_HEH
+        )
+
+        return re.sub(
+            rf"([آ-ی]*ه)\s+({pronoun_suffixes_pattern})(?!\S)",
             rf"\1{self.ZWNJ}\2",
             text,
         )
