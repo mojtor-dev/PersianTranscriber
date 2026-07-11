@@ -28,6 +28,5 @@ tools/whisper.cpp/build/
 *.log
 
 # Test files
-test_*
-
+/test_*
 output/*.txt
