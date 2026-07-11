@@ -6,6 +6,19 @@ from pathlib import Path
 from core.dictionary_engine import DictionaryEngine
 
 
+FIXTURE_PATH = (
+    Path(__file__).parent
+    / "fixtures"
+    / "whisper_fa_samples.json"
+)
+
+PROJECT_DICTIONARY_PATH = (
+    Path(__file__).parent.parent
+    / "data"
+    / "persian_dictionary.json"
+)
+
+
 class TestDictionaryEngine(unittest.TestCase):
     def create_dictionary(self, entries):
         temporary_directory = tempfile.TemporaryDirectory()
@@ -137,6 +150,46 @@ class TestDictionaryEngine(unittest.TestCase):
             )
         finally:
             temporary_directory.cleanup()
+
+    def test_real_whisper_dictionary_corrections(self):
+        with FIXTURE_PATH.open(
+            "r",
+            encoding="utf-8",
+        ) as fixture_file:
+            fixture_data = json.load(fixture_file)
+
+        engine = DictionaryEngine(
+            dictionary_path=str(PROJECT_DICTIONARY_PATH)
+        )
+
+        checked_corrections = 0
+
+        for sample in fixture_data["samples"]:
+            for correction in sample["confirmed_corrections"]:
+                if correction["category"] != "dictionary":
+                    continue
+
+                result = engine.correct(
+                    correction["input"]
+                )
+
+                self.assertEqual(
+                    result,
+                    correction["expected"],
+                    msg=(
+                        "Dictionary fixture correction failed: "
+                        f"{sample['id']} / "
+                        f"{correction['input']}"
+                    ),
+                )
+
+                checked_corrections += 1
+
+        self.assertGreater(
+            checked_corrections,
+            0,
+            msg="No dictionary corrections found in fixture",
+        )
 
 
 if __name__ == "__main__":
