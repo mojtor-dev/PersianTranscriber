@@ -1,6 +1,15 @@
+import json
 import unittest
+from pathlib import Path
 
 from core.persian_normalizer import PersianNormalizer
+
+
+FIXTURE_PATH = (
+    Path(__file__).parent
+    / "fixtures"
+    / "whisper_fa_samples.json"
+)
 
 
 class TestPersianNormalizer(unittest.TestCase):
@@ -132,6 +141,41 @@ class TestPersianNormalizer(unittest.TestCase):
         second_result = self.normalizer.normalize(first_result)
 
         self.assertEqual(first_result, second_result)
+
+    def test_real_whisper_normalizer_corrections(self):
+        with FIXTURE_PATH.open(
+            "r",
+            encoding="utf-8",
+        ) as fixture_file:
+            fixture_data = json.load(fixture_file)
+
+        checked_corrections = 0
+
+        for sample in fixture_data["samples"]:
+            for correction in sample["confirmed_corrections"]:
+                if correction["category"] != "normalizer":
+                    continue
+
+                result = self.normalizer.normalize(
+                    correction["input"]
+                )
+
+                self.assertEqual(
+                    result,
+                    correction["expected"],
+                    msg=(
+                        "Fixture correction failed: "
+                        f"{sample['id']}"
+                    ),
+                )
+
+                checked_corrections += 1
+
+        self.assertGreater(
+            checked_corrections,
+            0,
+            msg="No normalizer corrections found in fixture",
+        )
 
 
 if __name__ == "__main__":
