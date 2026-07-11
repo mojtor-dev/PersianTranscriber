@@ -24,6 +24,16 @@ class TestPersianNormalizer(unittest.TestCase):
             "کتاب یکی از بهترین منابع است.",
         )
 
+    def test_normalizes_arabic_digits(self):
+        text = "سال ٢٠٢٦ و شماره ١٢٣"
+
+        result = self.normalizer.normalize(text)
+
+        self.assertEqual(
+            result,
+            "سال ۲۰۲۶ و شماره ۱۲۳",
+        )
+
     def test_removes_tatweel(self):
         text = "متــــن آزمایشی"
 

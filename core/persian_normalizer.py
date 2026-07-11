@@ -5,8 +5,8 @@ class PersianNormalizer:
     """
     نرمال‌سازی پایه و کم‌خطر متن فارسی.
 
-    این کلاس فعلاً مستقل از Pipeline است و فقط برای تست
-    قواعد اولیه نرمال‌سازی استفاده می‌شود.
+    این کلاس قواعد عمومی و قطعی نرمال‌سازی فارسی را اعمال می‌کند
+    و پیش از DictionaryEngine در Pipeline اجرا می‌شود.
     """
 
     ZWNJ = "\u200c"
@@ -17,6 +17,19 @@ class PersianNormalizer:
         "ك": "ک",
         "ة": "ه",
         "ۀ": "هٔ",
+    }
+
+    DIGIT_REPLACEMENTS = {
+        "٠": "۰",
+        "١": "۱",
+        "٢": "۲",
+        "٣": "۳",
+        "٤": "۴",
+        "٥": "۵",
+        "٦": "۶",
+        "٧": "۷",
+        "٨": "۸",
+        "٩": "۹",
     }
 
     PREFIXES = (
@@ -43,6 +56,7 @@ class PersianNormalizer:
             return ""
 
         text = self._normalize_characters(text)
+        text = self._normalize_digits(text)
         text = self._remove_tatweel(text)
         text = self._normalize_whitespace(text)
         text = self._normalize_punctuation_spacing(text)
@@ -54,6 +68,12 @@ class PersianNormalizer:
 
     def _normalize_characters(self, text: str) -> str:
         for source, target in self.CHARACTER_REPLACEMENTS.items():
+            text = text.replace(source, target)
+
+        return text
+
+    def _normalize_digits(self, text: str) -> str:
+        for source, target in self.DIGIT_REPLACEMENTS.items():
             text = text.replace(source, target)
 
         return text
@@ -75,9 +95,15 @@ class PersianNormalizer:
     def _normalize_punctuation_spacing(text: str) -> str:
         punctuation = "،؛:؟!,.٪"
 
-        text = re.sub(rf"\s+([{re.escape(punctuation)}])", r"\1", text)
         text = re.sub(
-            rf"([{re.escape(punctuation)}])(?=[^\s\n{re.escape(punctuation)}])",
+            rf"\s+([{re.escape(punctuation)}])",
+            r"\1",
+            text,
+        )
+
+        text = re.sub(
+            rf"([{re.escape(punctuation)}])"
+            rf"(?=[^\s\n{re.escape(punctuation)}])",
             r"\1 ",
             text,
         )
@@ -86,7 +112,8 @@ class PersianNormalizer:
 
     def _normalize_prefixes(self, text: str) -> str:
         prefixes_pattern = "|".join(
-            re.escape(prefix) for prefix in self.PREFIXES
+            re.escape(prefix)
+            for prefix in self.PREFIXES
         )
 
         return re.sub(
@@ -97,7 +124,8 @@ class PersianNormalizer:
 
     def _normalize_suffixes(self, text: str) -> str:
         suffixes_pattern = "|".join(
-            re.escape(suffix) for suffix in self.SUFFIXES
+            re.escape(suffix)
+            for suffix in self.SUFFIXES
         )
 
         return re.sub(
