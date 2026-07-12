@@ -1,6 +1,6 @@
 """
 PersianTranscriber Command Line Interface
-Version: 0.2.0
+Version: 1.0.0
 """
 
 import argparse
