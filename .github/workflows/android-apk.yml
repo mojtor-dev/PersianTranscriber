@@ -35,6 +35,14 @@ jobs:
         working-directory: android
         run: chmod +x gradlew
 
+      - name: Validate native source snapshot
+        run: |
+          test -f android/whisper.cpp/CMakeLists.txt
+          test -d android/whisper.cpp/ggml
+          test -d android/whisper.cpp/src
+          test -d android/whisper.cpp/include
+          grep -n "whisper.cpp" android/app/src/main/jni/whisper/CMakeLists.txt
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew --no-daemon assembleDebug
