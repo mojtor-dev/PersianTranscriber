@@ -123,10 +123,18 @@ class TestWhisperPrompt(unittest.TestCase):
             temporary_directory.cleanup()
 
     def test_rejects_empty_prompt(self):
-        with self.assertRaises(ValueError):
-            self.create_engine(
-                initial_prompt="   "
-            )
+        temporary_directory = None
+
+        try:
+            with self.assertRaises(ValueError):
+                temporary_directory, _ = (
+                    self.create_engine(
+                        initial_prompt="   "
+                    )
+                )
+        finally:
+            if temporary_directory is not None:
+                temporary_directory.cleanup()
 
     def test_reads_prompt_file(self):
         parser = app.build_parser()
