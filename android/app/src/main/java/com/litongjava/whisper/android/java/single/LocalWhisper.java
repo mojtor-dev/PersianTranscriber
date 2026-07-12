@@ -1,66 +1,65 @@
 package com.litongjava.whisper.android.java.single;
 
-import android.app.Application;
 import android.os.Build;
-import android.os.Handler;
 
 import androidx.annotation.RequiresApi;
 
-import com.blankj.utilcode.util.ToastUtils;
-import com.blankj.utilcode.util.Utils;
-import com.litongjava.jfinal.aop.Aop;
-import com.litongjava.whisper.android.java.bean.WhisperSegment;
-import com.litongjava.whisper.android.java.utils.AssetUtils;
 import com.whispercpp.java.whisper.WhisperContext;
 
 import java.io.File;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-
 @RequiresApi(api = Build.VERSION_CODES.O)
 public enum LocalWhisper {
-  INSTANCE;
+    INSTANCE;
 
-  public static final String modelFilePath = "models/ggml-tiny.bin";
-  private WhisperContext whisperContext;
+    private WhisperContext whisperContext;
+    private String loadedModelPath;
 
-  @RequiresApi(api = Build.VERSION_CODES.O)
-  LocalWhisper() {
-    Application context = Utils.getApp();
-    File filesDir = context.getFilesDir();
-    File modelFile = AssetUtils.copyFileIfNotExists(context, filesDir, modelFilePath);
-    String realModelFilePath = modelFile.getAbsolutePath();
-    whisperContext = WhisperContext.createContextFromFile(realModelFilePath);
-  }
+    public synchronized void loadModel(File modelFile) {
+        if (modelFile == null || !modelFile.isFile()) {
+            throw new IllegalArgumentException(
+                "Model file does not exist"
+            );
+        }
 
-  public synchronized String transcribeData(float[] data) throws ExecutionException, InterruptedException {
-    if(whisperContext==null){
-        toastModelLoading();
-        return null;
-    }else{
-      return whisperContext.transcribeData(data);
-    }
-  }
+        whisperContext = WhisperContext.createContextFromFile(
+            modelFile.getAbsolutePath()
+        );
 
-    private static void toastModelLoading() {
-        Aop.get(Handler.class).post(()->{
-          ToastUtils.showShort("please wait for model loading");
-        });
+        loadedModelPath = modelFile.getAbsolutePath();
     }
 
-    public List<WhisperSegment> transcribeDataWithTime(float[] audioData) throws ExecutionException, InterruptedException {
-    if(whisperContext==null){
-        toastModelLoading();
-      return null;
-    }else{
-      return whisperContext.transcribeDataWithTime(audioData);
+    public synchronized boolean isLoaded() {
+        return whisperContext != null;
     }
-  }
 
-  public void init() {
-    //noting to do.but init
-  }
+    public synchronized String getLoadedModelPath() {
+        return loadedModelPath;
+    }
 
+    public synchronized String transcribeData(float[] data)
+        throws ExecutionException, InterruptedException {
+        ensureLoaded();
+        return whisperContext.transcribeData(data);
+    }
 
+    public synchronized List transcribeDataWithTime(float[] data)
+        throws ExecutionException, InterruptedException {
+        ensureLoaded();
+        return whisperContext.transcribeDataWithTime(data);
+    }
+
+    private void ensureLoaded() {
+        if (whisperContext == null) {
+            throw new IllegalStateException(
+                "Model is not loaded"
+            );
+        }
+    }
+
+    public void init() {
+        // Kept for backward compatibility.
+    }
 }

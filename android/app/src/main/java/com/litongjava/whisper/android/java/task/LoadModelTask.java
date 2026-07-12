@@ -1,8 +1,6 @@
 package com.litongjava.whisper.android.java.task;
 
-import android.content.Context;
 import android.os.Build;
-import android.os.Handler;
 import android.widget.TextView;
 
 import com.blankj.utilcode.util.ThreadUtils;
@@ -11,34 +9,49 @@ import com.litongjava.whisper.android.java.services.WhisperService;
 
 import java.io.File;
 
-public class LoadModelTask extends ThreadUtils.Task<Object> {
-  private final TextView tv;
-  public LoadModelTask(TextView tv) {
-    this.tv = tv;
-  }
+public class LoadModelTask
+    extends ThreadUtils.Task<Object> {
 
-  @Override
-  public Object doInBackground() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      Aop.get(WhisperService.class).loadModel(tv);
-    }else{
-      Aop.get(Handler.class).post(()->{
-        tv.append("not supported android devices");
-      });
+    private final TextView outputView;
+    private final File modelFile;
 
+    public LoadModelTask(
+        TextView outputView,
+        File modelFile
+    ) {
+        this.outputView = outputView;
+        this.modelFile = modelFile;
     }
-    return null;
-  }
 
-  @Override
-  public void onSuccess(Object result) {
-  }
+    @Override
+    public Object doInBackground() {
+        if (
+            Build.VERSION.SDK_INT
+            < Build.VERSION_CODES.O
+        ) {
+            throw new IllegalStateException(
+                "Android 8 یا جدیدتر لازم است"
+            );
+        }
 
-  @Override
-  public void onCancel() {
-  }
+        Aop.get(WhisperService.class)
+            .loadModel(
+                outputView,
+                modelFile
+            );
 
-  @Override
-  public void onFail(Throwable t) {
-  }
+        return null;
+    }
+
+    @Override
+    public void onSuccess(Object result) {
+    }
+
+    @Override
+    public void onCancel() {
+    }
+
+    @Override
+    public void onFail(Throwable error) {
+    }
 }

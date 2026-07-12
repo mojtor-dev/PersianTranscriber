@@ -40,11 +40,13 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private Button transcribeBtn;
     private File selectedAudioFile;
+    private File selectedModelFile;
 
     private final WhisperService whisperService =
         Aop.get(WhisperService.class);
 
     private ActivityResultLauncher<String[]> audioPicker;
+    private ActivityResultLauncher<String[]> modelPicker;
     private ActivityResultLauncher<String> saveTextLauncher;
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -68,6 +70,38 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void configurePickers() {
+        modelPicker = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(),
+            uri -> {
+                if (uri == null) return;
+
+                try {
+                    String name = getDisplayName(uri);
+
+                    if (!name.toLowerCase().endsWith(".bin")) {
+                        message("فایل مدل باید پسوند bin داشته باشد.");
+                        return;
+                    }
+
+                    selectedModelFile = copyToCache(
+                        uri,
+                        "selected_model.bin"
+                    );
+
+                    statusText.setText(
+                        "مدل انتخاب شد: " + name
+                    );
+
+                    loadSelectedModel();
+                } catch (Exception error) {
+                    message(
+                        "خطا در خواندن مدل: "
+                            + error.getMessage()
+                    );
+                }
+            }
+        );
+
         audioPicker = registerForActivityResult(
             new ActivityResultContracts.OpenDocument(),
             uri -> {
@@ -125,7 +159,14 @@ public class MainActivity extends AppCompatActivity {
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void configureButtons() {
         findViewById(R.id.loadModelBtn)
-            .setOnClickListener(view -> loadModel());
+            .setOnClickListener(view ->
+                modelPicker.launch(
+                    new String[] {
+                        "application/octet-stream",
+                        "*/*"
+                    }
+                )
+            );
 
         findViewById(R.id.selectAudioBtn)
             .setOnClickListener(view ->
@@ -162,11 +203,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private void loadModel() {
+    private void loadSelectedModel() {
+        if (
+            selectedModelFile == null
+            || !selectedModelFile.isFile()
+        ) {
+            message("ابتدا فایل مدل را انتخاب کنید");
+            return;
+        }
+
         busy(true, "در حال بارگذاری مدل...");
 
         ThreadUtils.executeByIo(
-            new LoadModelTask(outputText) {
+            new LoadModelTask(
+                outputText,
+                selectedModelFile
+            ) {
                 @Override
                 public void onSuccess(Object result) {
                     busy(false, "مدل آماده است");
@@ -174,8 +226,15 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onFail(Throwable error) {
-                    busy(false, "بارگذاری مدل ناموفق بود");
-                    message("خطای مدل: " + error.getMessage());
+                    busy(
+                        false,
+                        "بارگذاری مدل ناموفق بود"
+                    );
+
+                    message(
+                        "خطای مدل: "
+                            + error.getMessage()
+                    );
                 }
             }
         );
