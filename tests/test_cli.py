@@ -142,6 +142,8 @@ class TestCommandLineInterface(unittest.TestCase):
                 "chunk_duration_seconds": 240,
                 "output_dir": "results",
                 "output_format": "txt",
+                "output_formats": ["txt"],
+                "subtitle_seconds": 5,
             },
         )
 

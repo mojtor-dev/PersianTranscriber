@@ -8,6 +8,7 @@ from core.audio_splitter import AudioSplitter
 from core.cleaner import TextCleaner
 from core.dictionary_engine import DictionaryEngine
 from core.docx_exporter import DocxExporter
+from core.exporters import ExportManager
 from core.logger import AppLogger
 from core.persian_normalizer import PersianNormalizer
 from core.progress import ProgressManager
@@ -23,6 +24,11 @@ class TranscriptionPipeline:
         "both",
         "txt",
         "docx",
+        "md",
+        "json",
+        "srt",
+        "vtt",
+        "pdf",
     }
 
     def __init__(
@@ -35,6 +41,8 @@ class TranscriptionPipeline:
         chunk_duration_seconds=300,
         output_dir="output",
         output_format="both",
+        output_formats=None,
+        subtitle_seconds=5,
         initial_prompt=None,
     ):
         if (
@@ -47,6 +55,11 @@ class TranscriptionPipeline:
             )
 
         self.output_format = output_format
+        self.output_formats = (
+            output_formats
+            if output_formats is not None
+            else output_format
+        )
 
         self.transcriber = TranscriberEngine(
             engine_name=engine_name,
@@ -80,6 +93,11 @@ class TranscriptionPipeline:
 
         self.text_exporter = TextExporter(
             output_dir=output_dir
+        )
+
+        self.export_manager = ExportManager(
+            output_dir=output_dir,
+            subtitle_seconds=subtitle_seconds,
         )
 
         self.logger = AppLogger()
@@ -210,6 +228,18 @@ class TranscriptionPipeline:
         return clean_text
 
     def _save_outputs(self, text):
+        export_manager = getattr(
+            self,
+            "export_manager",
+            None,
+        )
+
+        if export_manager is not None:
+            return export_manager.export(
+                text,
+                formats=self.output_formats,
+            )
+
         outputs = {}
 
         if self.output_format in {

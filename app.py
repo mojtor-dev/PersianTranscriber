@@ -98,6 +98,23 @@ def build_parser():
         ),
     )
 
+    parser.add_argument(
+        "--formats",
+        help=(
+            "comma-separated formats: "
+            "txt,docx,md,json,srt,vtt,pdf"
+        ),
+    )
+
+    parser.add_argument(
+        "--subtitle-seconds",
+        type=positive_integer,
+        default=5,
+        help=(
+            "synthetic subtitle duration per segment"
+        ),
+    )
+
     output_group = (
         parser.add_mutually_exclusive_group()
     )
@@ -182,6 +199,39 @@ def resolve_output_format(args):
 
     return "both"
 
+
+
+def resolve_output_formats(args):
+    if args.formats:
+        if args.txt_only or args.docx_only:
+            raise ValueError(
+                "--formats cannot be combined with "
+                "--txt-only or --docx-only"
+            )
+
+        values = [
+            item.strip().lower()
+            for item in args.formats.split(",")
+            if item.strip()
+        ]
+
+        if not values:
+            raise ValueError(
+                "--formats cannot be empty"
+            )
+
+        return values
+
+    if args.txt_only:
+        return ["txt"]
+
+    if args.docx_only:
+        return ["docx"]
+
+    return [
+        "txt",
+        "docx",
+    ]
 
 
 def resolve_initial_prompt(
@@ -329,6 +379,12 @@ def main(argv=None):
             "output_dir": args.output_dir,
             "output_format": (
                 resolve_output_format(args)
+            ),
+            "output_formats": (
+                resolve_output_formats(args)
+            ),
+            "subtitle_seconds": (
+                args.subtitle_seconds
             ),
         }
 
