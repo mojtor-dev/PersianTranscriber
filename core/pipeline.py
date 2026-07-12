@@ -1,6 +1,6 @@
 """
 PersianTranscriber Pipeline
-Version: 0.2.0
+Version: 0.3.0
 """
 
 from core.audio_loader import AudioLoader
@@ -125,62 +125,84 @@ class TranscriptionPipeline:
             "Splitting long audio",
         )
 
-        chunk_paths = self.splitter.split(
-            audio_path
-        )
-
-        chunk_texts = []
-        total_chunks = len(chunk_paths)
-
-        for index, chunk_path in enumerate(
-            chunk_paths,
-            start=1,
-        ):
-            progress_percent = self._chunk_progress(
-                index=index,
-                total_chunks=total_chunks,
+        try:
+            chunk_paths = self.splitter.split(
+                audio_path
             )
 
-            self.progress.update(
-                progress_percent,
-                (
-                    "Transcribing chunk "
-                    f"{index}/{total_chunks}"
-                ),
-            )
+            chunk_texts = []
+            total_chunks = len(chunk_paths)
 
-            chunk_loader = AudioLoader(
-                chunk_path
-            )
+            for index, chunk_path in enumerate(
+                chunk_paths,
+                start=1,
+            ):
+                progress_percent = self._chunk_progress(
+                    index=index,
+                    total_chunks=total_chunks,
+                )
 
-            chunk_info = chunk_loader.load_info()
+                self.progress.update(
+                    progress_percent,
+                    (
+                        "Transcribing chunk "
+                        f"{index}/{total_chunks}"
+                    ),
+                )
 
-            if chunk_info is None:
+                chunk_loader = AudioLoader(
+                    chunk_path
+                )
+
+                chunk_info = chunk_loader.load_info()
+
+                if chunk_info is None:
+                    raise RuntimeError(
+                        f"Cannot load audio chunk: {chunk_path}"
+                    )
+
+                result = self.transcriber.transcribe(
+                    chunk_info
+                )
+
+                chunk_text = self._extract_text(
+                    result
+                )
+
+                if chunk_text.strip():
+                    chunk_texts.append(
+                        chunk_text
+                    )
+
+            if not chunk_texts:
                 raise RuntimeError(
-                    f"Cannot load audio chunk: {chunk_path}"
+                    "Whisper returned no text for audio chunks"
                 )
 
-            result = self.transcriber.transcribe(
-                chunk_info
+            return self.merger.merge(
+                chunk_texts
             )
 
-            chunk_text = self._extract_text(
-                result
+        finally:
+            self._cleanup_audio_chunks()
+
+    def _cleanup_audio_chunks(self):
+        try:
+            return self.splitter.cleanup()
+        except Exception as cleanup_error:
+            logger = getattr(
+                self,
+                "logger",
+                None,
             )
 
-            if chunk_text.strip():
-                chunk_texts.append(
-                    chunk_text
+            if logger is not None:
+                logger.error(
+                    "Cannot clean temporary audio chunks: "
+                    f"{cleanup_error}"
                 )
 
-        if not chunk_texts:
-            raise RuntimeError(
-                "Whisper returned no text for audio chunks"
-            )
-
-        return self.merger.merge(
-            chunk_texts
-        )
+            return 0
 
     @staticmethod
     def _extract_text(result):

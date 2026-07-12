@@ -16,20 +16,38 @@ class FakeProgress:
         )
 
 
+class FakeLogger:
+    def __init__(self):
+        self.errors = []
+
+    def error(self, message):
+        self.errors.append(message)
+
+
 class FakeTranscriber:
-    def __init__(self, texts_by_path):
-        self.texts_by_path = texts_by_path
+    def __init__(self, results_by_path):
+        self.results_by_path = results_by_path
         self.transcribed_paths = []
 
     def transcribe(self, audio_info):
+        audio_path = audio_info.file_path
+
         self.transcribed_paths.append(
-            audio_info.file_path
+            audio_path
         )
 
+        result = self.results_by_path[
+            audio_path
+        ]
+
+        if isinstance(result, Exception):
+            raise result
+
+        if isinstance(result, dict):
+            return result
+
         return {
-            "text": self.texts_by_path[
-                audio_info.file_path
-            ]
+            "text": result
         }
 
 
@@ -38,6 +56,7 @@ class FakeSplitter:
         self,
         should_split_result,
         chunk_paths=None,
+        cleanup_error=None,
     ):
         self.should_split_result = (
             should_split_result
@@ -47,8 +66,10 @@ class FakeSplitter:
             chunk_paths or []
         )
 
+        self.cleanup_error = cleanup_error
         self.checked_paths = []
         self.split_paths = []
+        self.cleanup_calls = 0
 
     def should_split(self, audio_path):
         self.checked_paths.append(
@@ -63,6 +84,14 @@ class FakeSplitter:
         )
 
         return self.chunk_paths
+
+    def cleanup(self):
+        self.cleanup_calls += 1
+
+        if self.cleanup_error is not None:
+            raise self.cleanup_error
+
+        return len(self.chunk_paths)
 
 
 class FakeMerger:
@@ -94,8 +123,29 @@ class TestLongAudioPipeline(unittest.TestCase):
             merger or FakeMerger()
         )
         pipeline.progress = FakeProgress()
+        pipeline.logger = FakeLogger()
 
         return pipeline
+
+    def create_chunks(self, directory, count):
+        directory_path = Path(directory)
+        chunk_paths = []
+
+        for index in range(count):
+            chunk_path = (
+                directory_path
+                / f"chunk_{index:04d}.wav"
+            )
+
+            chunk_path.write_bytes(
+                b"test"
+            )
+
+            chunk_paths.append(
+                str(chunk_path)
+            )
+
+        return chunk_paths
 
     def test_short_audio_uses_original_file(self):
         audio_info = SimpleNamespace(
@@ -136,34 +186,24 @@ class TestLongAudioPipeline(unittest.TestCase):
             [],
         )
 
+        self.assertEqual(
+            splitter.cleanup_calls,
+            0,
+        )
+
     def test_long_audio_transcribes_chunks_in_order(self):
         with tempfile.TemporaryDirectory() as directory:
-            directory_path = Path(directory)
-
-            chunk_paths = []
-
-            for index in range(3):
-                chunk_path = (
-                    directory_path
-                    / f"chunk_{index:04d}.wav"
-                )
-
-                chunk_path.write_bytes(
-                    b"test"
-                )
-
-                chunk_paths.append(
-                    str(chunk_path)
-                )
-
-            texts_by_path = {
-                chunk_paths[0]: "بخش اول",
-                chunk_paths[1]: "بخش دوم",
-                chunk_paths[2]: "بخش سوم",
-            }
+            chunk_paths = self.create_chunks(
+                directory,
+                count=3,
+            )
 
             transcriber = FakeTranscriber(
-                texts_by_path
+                {
+                    chunk_paths[0]: "بخش اول",
+                    chunk_paths[1]: "بخش دوم",
+                    chunk_paths[2]: "بخش سوم",
+                }
             )
 
             splitter = FakeSplitter(
@@ -179,12 +219,10 @@ class TestLongAudioPipeline(unittest.TestCase):
                 merger=merger,
             )
 
-            audio_info = SimpleNamespace(
-                file_path="long.mp3"
-            )
-
             result = pipeline._transcribe_audio(
-                audio_info
+                SimpleNamespace(
+                    file_path="long.mp3"
+                )
             )
 
             self.assertEqual(
@@ -206,27 +244,17 @@ class TestLongAudioPipeline(unittest.TestCase):
                 "بخش اول\n\nبخش دوم\n\nبخش سوم",
             )
 
+            self.assertEqual(
+                splitter.cleanup_calls,
+                1,
+            )
+
     def test_long_audio_ignores_empty_chunk_text(self):
         with tempfile.TemporaryDirectory() as directory:
-            directory_path = Path(directory)
-
-            first_chunk = (
-                directory_path
-                / "chunk_0000.wav"
+            chunk_paths = self.create_chunks(
+                directory,
+                count=2,
             )
-
-            second_chunk = (
-                directory_path
-                / "chunk_0001.wav"
-            )
-
-            first_chunk.write_bytes(b"test")
-            second_chunk.write_bytes(b"test")
-
-            chunk_paths = [
-                str(first_chunk),
-                str(second_chunk),
-            ]
 
             transcriber = FakeTranscriber(
                 {
@@ -262,6 +290,104 @@ class TestLongAudioPipeline(unittest.TestCase):
             self.assertEqual(
                 merger.received_texts,
                 ["متن"],
+            )
+
+            self.assertEqual(
+                splitter.cleanup_calls,
+                1,
+            )
+
+    def test_cleans_chunks_after_transcription_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            chunk_paths = self.create_chunks(
+                directory,
+                count=2,
+            )
+
+            transcriber = FakeTranscriber(
+                {
+                    chunk_paths[0]: "بخش اول",
+                    chunk_paths[1]: RuntimeError(
+                        "Whisper failed"
+                    ),
+                }
+            )
+
+            splitter = FakeSplitter(
+                should_split_result=True,
+                chunk_paths=chunk_paths,
+            )
+
+            pipeline = self.create_pipeline(
+                transcriber=transcriber,
+                splitter=splitter,
+            )
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Whisper failed",
+            ):
+                pipeline._transcribe_audio(
+                    SimpleNamespace(
+                        file_path="long.wav"
+                    )
+                )
+
+            self.assertEqual(
+                splitter.cleanup_calls,
+                1,
+            )
+
+    def test_cleanup_error_does_not_hide_success(self):
+        with tempfile.TemporaryDirectory() as directory:
+            chunk_paths = self.create_chunks(
+                directory,
+                count=1,
+            )
+
+            transcriber = FakeTranscriber(
+                {
+                    chunk_paths[0]: "متن",
+                }
+            )
+
+            splitter = FakeSplitter(
+                should_split_result=True,
+                chunk_paths=chunk_paths,
+                cleanup_error=OSError(
+                    "cleanup failed"
+                ),
+            )
+
+            pipeline = self.create_pipeline(
+                transcriber=transcriber,
+                splitter=splitter,
+            )
+
+            result = pipeline._transcribe_audio(
+                SimpleNamespace(
+                    file_path="long.wav"
+                )
+            )
+
+            self.assertEqual(
+                result,
+                "متن",
+            )
+
+            self.assertEqual(
+                splitter.cleanup_calls,
+                1,
+            )
+
+            self.assertEqual(
+                len(pipeline.logger.errors),
+                1,
+            )
+
+            self.assertIn(
+                "cleanup failed",
+                pipeline.logger.errors[0],
             )
 
     def test_rejects_invalid_transcriber_result(self):
