@@ -1,0 +1,54 @@
+{
+  "language": "fa",
+  "description": "Verified corrections collected from real Persian Whisper outputs",
+  "entries": [
+    {
+      "input": "سب پخیر",
+      "expected": "صبح بخیر"
+    },
+    {
+      "input": "نرمفزری",
+      "expected": "نرم‌افزاری"
+    },
+    {
+      "input": "کومک مکنه",
+      "expected": "کمک می‌کنه"
+    },
+    {
+      "input": "کمک مکنه",
+      "expected": "کمک می‌کنه"
+    },
+    {
+      "input": "کومک",
+      "expected": "کمک"
+    },
+    {
+      "input": "سوطی",
+      "expected": "صوتی"
+    },
+    {
+      "input": "بمتن",
+      "expected": "به متن"
+    },
+    {
+      "input": "اومید ورم",
+      "expected": "امیدوارم"
+    },
+    {
+      "input": "اخصوصا",
+      "expected": "خصوصاً"
+    },
+    {
+      "input": "دیقات",
+      "expected": "دقت"
+    },
+    {
+      "input": "نرم افسار",
+      "expected": "نرم‌افزار"
+    },
+    {
+      "input": "دروس بکنم",
+      "expected": "درست بکنم"
+    }
+  ]
+}

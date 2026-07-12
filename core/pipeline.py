@@ -1,6 +1,6 @@
 """
 PersianTranscriber Pipeline
-Version: 0.4.0
+Version: 0.5.0
 """
 
 from core.audio_loader import AudioLoader
@@ -118,16 +118,8 @@ class TranscriptionPipeline:
                 "Cleaning text",
             )
 
-            clean_text = self.cleaner.clean(
+            clean_text = self._post_process_text(
                 raw_text
-            )
-
-            clean_text = self.normalizer.normalize(
-                clean_text
-            )
-
-            clean_text = self.dictionary.correct(
-                clean_text
             )
 
             self.progress.update(
@@ -155,6 +147,30 @@ class TranscriptionPipeline:
         except Exception as error:
             self.logger.error(str(error))
             raise
+
+    def _post_process_text(self, raw_text):
+        clean_text = self.cleaner.clean(
+            raw_text
+        )
+
+        clean_text = self.normalizer.normalize(
+            clean_text
+        )
+
+        clean_text, report = (
+            self.dictionary.correct_with_report(
+                clean_text
+            )
+        )
+
+        if report["replacement_count"] > 0:
+            self.logger.write(
+                "DICTIONARY "
+                f"replacements={report['replacement_count']} "
+                f"rules={report['matched_rules']}"
+            )
+
+        return clean_text
 
     def _save_outputs(self, text):
         outputs = {}
