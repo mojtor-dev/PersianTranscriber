@@ -9,6 +9,8 @@ from pathlib import Path
 
 import config
 from core.pipeline import TranscriptionPipeline
+from core.audio_analysis import AudioAnalyzer
+from core.prompt_profiles.selector import PromptProfileSelector
 from core.prompt_profiles import PromptProfileManager
 
 
@@ -138,6 +140,28 @@ def build_parser():
     )
 
     parser.add_argument(
+        "--auto-prompt-profile",
+        action="store_true",
+        help=(
+            "conservatively select a prompt profile from audio metadata; "
+            "low-confidence cases use no prompt"
+        ),
+    )
+
+    parser.add_argument(
+        "--content-hint",
+        choices=[
+            "general",
+            "technical",
+            "meeting",
+            "lecture",
+        ],
+        help=(
+            "optional content hint used by automatic profile selection"
+        ),
+    )
+
+    parser.add_argument(
         "--version",
         action="version",
         version=(
@@ -160,7 +184,10 @@ def resolve_output_format(args):
 
 
 
-def resolve_initial_prompt(args):
+def resolve_initial_prompt(
+    args,
+    audio_path=None,
+):
     selected_sources = sum(
         value is not None
         for value in (
@@ -176,11 +203,27 @@ def resolve_initial_prompt(args):
             "--prompt-file or --prompt-profile"
         )
 
+    if args.auto_prompt_profile and selected_sources > 0:
+        raise ValueError(
+            "--auto-prompt-profile cannot be combined with "
+            "--prompt, --prompt-file or --prompt-profile"
+        )
+
+    if (
+        args.content_hint is not None
+        and not args.auto_prompt_profile
+    ):
+        raise ValueError(
+            "--content-hint requires --auto-prompt-profile"
+        )
+
     if args.prompt is not None:
         prompt = args.prompt.strip()
 
         if not prompt:
-            raise ValueError("Prompt cannot be empty")
+            raise ValueError(
+                "Prompt cannot be empty"
+            )
 
         return prompt
 
@@ -189,9 +232,14 @@ def resolve_initial_prompt(args):
             args.prompt_file
         ).expanduser()
 
-        if not prompt_path.is_file():
+        if not prompt_path.exists():
             raise FileNotFoundError(
                 f"Prompt file not found: {prompt_path}"
+            )
+
+        if not prompt_path.is_file():
+            raise ValueError(
+                f"Prompt path is not a file: {prompt_path}"
             )
 
         prompt = prompt_path.read_text(
@@ -205,9 +253,37 @@ def resolve_initial_prompt(args):
 
         return prompt
 
+    manager = PromptProfileManager()
+
     if args.prompt_profile is not None:
-        return PromptProfileManager().resolve_prompt(
+        return manager.resolve_prompt(
             args.prompt_profile
+        )
+
+    if args.auto_prompt_profile:
+        if audio_path is None:
+            raise ValueError(
+                "audio_path is required for automatic profile selection"
+            )
+
+        analysis = AudioAnalyzer().analyze(
+            audio_path
+        )
+
+        selection = PromptProfileSelector().select(
+            analysis,
+            content_hint=args.content_hint,
+        )
+
+        print(
+            "Automatic prompt profile: "
+            f"{selection.profile_name} "
+            f"(confidence={selection.confidence:.2f}; "
+            f"reason={selection.reason})"
+        )
+
+        return manager.resolve_prompt(
+            selection.profile_name
         )
 
     return None
@@ -257,7 +333,8 @@ def main(argv=None):
         }
 
         initial_prompt = resolve_initial_prompt(
-            args
+            args,
+            audio_path=audio_path,
         )
 
         if initial_prompt is not None:
