@@ -1,39 +1,36 @@
 """
 PersianTranscriber Text Exporter
-Version: 0.1.0
+Version: 0.2.0
 """
 
-import os
+from pathlib import Path
 
 
 class TextExporter:
 
-    def __init__(self):
+    def __init__(self, output_dir="output"):
+        self.output_dir = Path(
+            output_dir
+        )
 
-        self.output_dir = "output"
-
-        os.makedirs(
-            self.output_dir,
-            exist_ok=True
+        self.output_dir.mkdir(
+            parents=True,
+            exist_ok=True,
         )
 
     def save_text(
         self,
         text,
-        filename="transcription.txt"
+        filename="transcription.txt",
     ):
-
-        output_path = os.path.join(
-            self.output_dir,
-            filename
+        output_path = (
+            self.output_dir
+            / filename
         )
 
-        with open(
-            output_path,
-            "w",
-            encoding="utf-8"
-        ) as file:
+        output_path.write_text(
+            text,
+            encoding="utf-8",
+        )
 
-            file.write(text)
-
-        return output_path
+        return str(output_path)

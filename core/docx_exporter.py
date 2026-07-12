@@ -1,37 +1,37 @@
 """
 PersianTranscriber DOCX Exporter
-Version: 0.1.0
+Version: 0.2.0
 """
 
-import os
-from docx import Document
+from pathlib import Path
 
-import config
+from docx import Document
 
 
 class DocxExporter:
 
-    def __init__(self):
-        os.makedirs(
-            config.DEFAULT_OUTPUT_FOLDER,
-            exist_ok=True
+    def __init__(self, output_dir="output"):
+        self.output_dir = Path(
+            output_dir
+        )
+
+        self.output_dir.mkdir(
+            parents=True,
+            exist_ok=True,
         )
 
     def save_docx(
         self,
         text,
-        filename="transcription.docx"
+        filename="transcription.docx",
     ):
-
-        path = os.path.join(
-            config.DEFAULT_OUTPUT_FOLDER,
-            filename
+        output_path = (
+            self.output_dir
+            / filename
         )
 
-        doc = Document()
+        document = Document()
+        document.add_paragraph(text)
+        document.save(output_path)
 
-        doc.add_paragraph(text)
-
-        doc.save(path)
-
-        return path
+        return str(output_path)

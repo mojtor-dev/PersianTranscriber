@@ -1,6 +1,6 @@
 """
-PersianTranscriber Engine
-Version: 0.1.0
+PersianTranscriber Transcriber Engine
+Version: 0.2.0
 """
 
 from core.engine_manager import EngineManager
@@ -8,16 +8,28 @@ from core.engine_manager import EngineManager
 
 class TranscriberEngine:
 
-    def __init__(self):
-        self.manager = EngineManager()
+    def __init__(
+        self,
+        engine_name=None,
+        model=None,
+        language=None,
+        threads=None,
+        timeout_seconds=None,
+    ):
+        self.manager = EngineManager(
+            engine_name=engine_name,
+            model=model,
+            language=language,
+            threads=threads,
+            timeout_seconds=timeout_seconds,
+        )
+
         self.engine = self.manager.get_engine()
 
     def load_model(self):
-
         return self.engine.load()
 
     def transcribe(self, audio_info):
-
         if not audio_info:
             return None
 

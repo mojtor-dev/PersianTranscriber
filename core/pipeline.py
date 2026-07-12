@@ -1,6 +1,6 @@
 """
 PersianTranscriber Pipeline
-Version: 0.3.0
+Version: 0.4.0
 """
 
 from core.audio_loader import AudioLoader
@@ -18,15 +18,62 @@ from core.transcriber import TranscriberEngine
 
 class TranscriptionPipeline:
 
-    def __init__(self):
-        self.transcriber = TranscriberEngine()
+    VALID_OUTPUT_FORMATS = {
+        "both",
+        "txt",
+        "docx",
+    }
+
+    def __init__(
+        self,
+        engine_name=None,
+        model=None,
+        language=None,
+        threads=None,
+        timeout_seconds=None,
+        chunk_duration_seconds=300,
+        output_dir="output",
+        output_format="both",
+    ):
+        if (
+            output_format
+            not in self.VALID_OUTPUT_FORMATS
+        ):
+            raise ValueError(
+                "output_format must be one of: "
+                "both, txt, docx"
+            )
+
+        self.output_format = output_format
+
+        self.transcriber = TranscriberEngine(
+            engine_name=engine_name,
+            model=model,
+            language=language,
+            threads=threads,
+            timeout_seconds=timeout_seconds,
+        )
+
         self.cleaner = TextCleaner()
         self.normalizer = PersianNormalizer()
         self.dictionary = DictionaryEngine()
-        self.splitter = AudioSplitter()
+
+        self.splitter = AudioSplitter(
+            chunk_duration_seconds=(
+                chunk_duration_seconds
+            )
+        )
+
         self.merger = TextMerger()
-        self.exporter = DocxExporter()
-        self.text_exporter = TextExporter()
+
+        self.exporter = DocxExporter(
+            output_dir=output_dir
+        )
+
+        self.text_exporter = TextExporter(
+            output_dir=output_dir
+        )
+
         self.logger = AppLogger()
         self.progress = ProgressManager()
 
@@ -88,27 +135,58 @@ class TranscriptionPipeline:
                 "Saving output",
             )
 
-            self.text_exporter.save_text(
+            outputs = self._save_outputs(
                 clean_text
             )
 
-            output = self.exporter.save_docx(
-                clean_text
+            primary_output = (
+                outputs.get("docx")
+                or outputs.get("txt")
             )
 
-            self.logger.finish(output)
+            self.logger.finish(
+                primary_output
+            )
+
             self.progress.finish()
 
-            return output
+            return outputs
 
         except Exception as error:
             self.logger.error(str(error))
             raise
 
+    def _save_outputs(self, text):
+        outputs = {}
+
+        if self.output_format in {
+            "both",
+            "txt",
+        }:
+            outputs["txt"] = (
+                self.text_exporter.save_text(
+                    text
+                )
+            )
+
+        if self.output_format in {
+            "both",
+            "docx",
+        }:
+            outputs["docx"] = (
+                self.exporter.save_docx(
+                    text
+                )
+            )
+
+        return outputs
+
     def _transcribe_audio(self, audio_info):
         audio_path = audio_info.file_path
 
-        if not self.splitter.should_split(audio_path):
+        if not self.splitter.should_split(
+            audio_path
+        ):
             self.progress.update(
                 50,
                 "Transcribing audio",
@@ -137,9 +215,11 @@ class TranscriptionPipeline:
                 chunk_paths,
                 start=1,
             ):
-                progress_percent = self._chunk_progress(
-                    index=index,
-                    total_chunks=total_chunks,
+                progress_percent = (
+                    self._chunk_progress(
+                        index=index,
+                        total_chunks=total_chunks,
+                    )
                 )
 
                 self.progress.update(
@@ -154,15 +234,20 @@ class TranscriptionPipeline:
                     chunk_path
                 )
 
-                chunk_info = chunk_loader.load_info()
+                chunk_info = (
+                    chunk_loader.load_info()
+                )
 
                 if chunk_info is None:
                     raise RuntimeError(
-                        f"Cannot load audio chunk: {chunk_path}"
+                        "Cannot load audio chunk: "
+                        f"{chunk_path}"
                     )
 
-                result = self.transcriber.transcribe(
-                    chunk_info
+                result = (
+                    self.transcriber.transcribe(
+                        chunk_info
+                    )
                 )
 
                 chunk_text = self._extract_text(
@@ -176,7 +261,8 @@ class TranscriptionPipeline:
 
             if not chunk_texts:
                 raise RuntimeError(
-                    "Whisper returned no text for audio chunks"
+                    "Whisper returned no text "
+                    "for audio chunks"
                 )
 
             return self.merger.merge(
@@ -198,7 +284,8 @@ class TranscriptionPipeline:
 
             if logger is not None:
                 logger.error(
-                    "Cannot clean temporary audio chunks: "
+                    "Cannot clean temporary "
+                    "audio chunks: "
                     f"{cleanup_error}"
                 )
 
@@ -208,31 +295,33 @@ class TranscriptionPipeline:
     def _extract_text(result):
         if not isinstance(result, dict):
             raise RuntimeError(
-                "Transcriber returned an invalid result"
+                "Transcriber returned "
+                "an invalid result"
             )
 
         text = result.get("text")
 
         if not isinstance(text, str):
             raise RuntimeError(
-                "Transcriber result does not contain valid text"
+                "Transcriber result does not "
+                "contain valid text"
             )
 
         return text
 
     @staticmethod
-    def _chunk_progress(index, total_chunks):
+    def _chunk_progress(
+        index,
+        total_chunks,
+    ):
         if total_chunks <= 0:
             return 30
 
         start_percent = 35
         end_percent = 80
-        progress_range = (
-            end_percent - start_percent
-        )
 
         return start_percent + int(
-            progress_range
+            (end_percent - start_percent)
             * index
             / total_chunks
         )
