@@ -1,6 +1,6 @@
 """
 PersianTranscriber Audio Splitter
-Version: 0.2.0
+Version: 0.3.0
 """
 
 import json
@@ -11,7 +11,7 @@ from pathlib import Path
 
 class AudioSplitter:
     """
-    تشخیص مدت و تقسیم فایل صوتی با ffmpeg و ffprobe.
+    تشخیص مدت، تقسیم و پاک‌سازی قطعه‌های موقت صوتی.
     """
 
     DEFAULT_CHUNK_DURATION_SECONDS = 300
@@ -34,9 +34,6 @@ class AudioSplitter:
         self.chunk_duration_seconds = chunk_duration_seconds
 
     def get_duration(self, audio_path):
-        """
-        مدت فایل صوتی را بر حسب ثانیه برمی‌گرداند.
-        """
         source_path = self._validate_audio_path(audio_path)
         self._require_command("ffprobe")
 
@@ -88,18 +85,12 @@ class AudioSplitter:
         return duration_seconds
 
     def should_split(self, audio_path):
-        """
-        مشخص می‌کند آیا فایل از اندازه‌ی یک chunk طولانی‌تر است.
-        """
         return (
             self.get_duration(audio_path)
             > self.chunk_duration_seconds
         )
 
     def split(self, audio_path):
-        """
-        فایل صوتی را به قطعه‌های WAV مرتب تقسیم می‌کند.
-        """
         source_path = self._validate_audio_path(audio_path)
         self._require_command("ffmpeg")
 
@@ -140,19 +131,40 @@ class AudioSplitter:
             check=True,
         )
 
-        chunks = sorted(
-            self.output_dir.glob("chunk_*.wav")
-        )
+        chunks = self.list_chunks()
 
         if not chunks:
             raise RuntimeError(
                 "ffmpeg completed but no audio chunks were created"
             )
 
+        return chunks
+
+    def list_chunks(self):
         return [
             str(chunk_path)
-            for chunk_path in chunks
+            for chunk_path in sorted(
+                self.output_dir.glob("chunk_*.wav")
+            )
         ]
+
+    def cleanup(self):
+        """
+        فقط chunkهای ساخته‌شده توسط AudioSplitter را حذف می‌کند.
+        """
+        removed_count = 0
+
+        if not self.output_dir.exists():
+            return removed_count
+
+        for chunk_path in self.output_dir.glob(
+            "chunk_*.wav"
+        ):
+            if chunk_path.is_file():
+                chunk_path.unlink()
+                removed_count += 1
+
+        return removed_count
 
     @staticmethod
     def _require_command(command_name):
@@ -184,7 +196,4 @@ class AudioSplitter:
             exist_ok=True,
         )
 
-        for old_chunk in self.output_dir.glob(
-            "chunk_*.wav"
-        ):
-            old_chunk.unlink()
+        self.cleanup()

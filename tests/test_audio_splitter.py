@@ -170,6 +170,69 @@ class TestAudioSplitter(unittest.TestCase):
             chunks,
         )
 
+    def test_cleanup_removes_only_audio_chunks(self):
+        self.chunks_path.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        chunk_one = (
+            self.chunks_path
+            / "chunk_0000.wav"
+        )
+
+        chunk_two = (
+            self.chunks_path
+            / "chunk_0001.wav"
+        )
+
+        unrelated_file = (
+            self.chunks_path
+            / "keep.txt"
+        )
+
+        chunk_one.write_bytes(b"one")
+        chunk_two.write_bytes(b"two")
+        unrelated_file.write_text(
+            "keep",
+            encoding="utf-8",
+        )
+
+        splitter = AudioSplitter(
+            output_dir=self.chunks_path
+        )
+
+        removed_count = splitter.cleanup()
+
+        self.assertEqual(
+            removed_count,
+            2,
+        )
+
+        self.assertFalse(
+            chunk_one.exists()
+        )
+
+        self.assertFalse(
+            chunk_two.exists()
+        )
+
+        self.assertTrue(
+            unrelated_file.exists()
+        )
+
+    def test_cleanup_missing_directory_is_safe(self):
+        splitter = AudioSplitter(
+            output_dir=self.chunks_path
+        )
+
+        removed_count = splitter.cleanup()
+
+        self.assertEqual(
+            removed_count,
+            0,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
