@@ -18,3 +18,16 @@ cd android
 chmod +x gradlew
 ./gradlew assembleDebug
 ```
+
+## Usable WAV MVP
+
+- رابط فارسی
+- انتخاب فایل WAV
+- بارگذاری مدل داخلی
+- رونویسی فایل واقعی
+- نمایش وضعیت
+- ویرایش خروجی
+- ذخیره TXT
+- اشتراک متن
+
+در مرحله بعد MP3 و M4A با decoder بومی Android اضافه می‌شوند.
