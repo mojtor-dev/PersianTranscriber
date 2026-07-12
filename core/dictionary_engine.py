@@ -1,6 +1,6 @@
 """
 PersianTranscriber Dictionary Engine
-Version: 0.1.0
+Version: 0.2.0
 """
 
 import json
@@ -33,14 +33,29 @@ class DictionaryEngine:
             "r",
             encoding="utf-8",
         ) as file:
-            self.words = json.load(file)
+            loaded_words = json.load(file)
+
+        if not isinstance(loaded_words, dict):
+            raise ValueError(
+                "Dictionary JSON must contain an object"
+            )
+
+        self.words = loaded_words
 
     def correct(self, text):
         if not text:
             return ""
 
-        for wrong, correct in self.words.items():
-            pattern = self._build_phrase_pattern(wrong)
+        ordered_entries = sorted(
+            self.words.items(),
+            key=lambda item: len(item[0]),
+            reverse=True,
+        )
+
+        for wrong, correct in ordered_entries:
+            pattern = self._build_phrase_pattern(
+                wrong
+            )
 
             text = re.sub(
                 pattern,

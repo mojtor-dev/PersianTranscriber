@@ -1,5 +1,5 @@
 {
-  "source": "output/transcription.txt",
+  "source": "real Whisper.cpp outputs",
   "language": "fa",
   "samples": [
     {
@@ -24,6 +24,52 @@
         {
           "input": "اومید وارم",
           "expected": "امیدوارم",
+          "category": "dictionary"
+        }
+      ]
+    },
+    {
+      "id": "real-whisper-002",
+      "raw_text": "سلام، سب پخیر امروز جوم هست فکر مکنم نوز دهوم تیر ماه باشه و ما داریم یه تستی رو انجام میدیم و بر یه نرمفزری کار مکنیم و ترمکس رو بکار گرفتیم به حوشه مثلیه جیپیدی داریم کار مکنیم کومک مکنه جیپیدی که بطنم این نرم‌افزار رو درست بکنم و عدش استفاده بکنم برای تبدیل فایل‌های سوطی بمتن و اومید ورم که هم سورت و اخصوصا دیقات خیلی بالای داشته باشه تو قولوم مختلفی دیگه هم میتونه به همون کومک مکنه",
+      "confirmed_corrections": [
+        {
+          "input": "سب پخیر",
+          "expected": "صبح بخیر",
+          "category": "dictionary"
+        },
+        {
+          "input": "نرمفزری",
+          "expected": "نرم‌افزاری",
+          "category": "dictionary"
+        },
+        {
+          "input": "کومک",
+          "expected": "کمک",
+          "category": "dictionary"
+        },
+        {
+          "input": "سوطی",
+          "expected": "صوتی",
+          "category": "dictionary"
+        },
+        {
+          "input": "بمتن",
+          "expected": "به متن",
+          "category": "dictionary"
+        },
+        {
+          "input": "اومید ورم",
+          "expected": "امیدوارم",
+          "category": "dictionary"
+        },
+        {
+          "input": "اخصوصا",
+          "expected": "خصوصاً",
+          "category": "dictionary"
+        },
+        {
+          "input": "دیقات",
+          "expected": "دقت",
           "category": "dictionary"
         }
       ]
