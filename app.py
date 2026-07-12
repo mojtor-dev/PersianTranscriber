@@ -9,6 +9,7 @@ from pathlib import Path
 
 import config
 from core.pipeline import TranscriptionPipeline
+from core.prompt_profiles import PromptProfileManager
 
 
 def positive_integer(value):
@@ -128,6 +129,14 @@ def build_parser():
         help="UTF-8 file containing the initial Whisper prompt",
     )
 
+    prompt_group.add_argument(
+        "--prompt-profile",
+        help=(
+            "named prompt profile: general, technical, "
+            "meeting or lecture"
+        ),
+    )
+
     parser.add_argument(
         "--version",
         action="version",
@@ -152,43 +161,56 @@ def resolve_output_format(args):
 
 
 def resolve_initial_prompt(args):
+    selected_sources = sum(
+        value is not None
+        for value in (
+            args.prompt,
+            args.prompt_file,
+            args.prompt_profile,
+        )
+    )
+
+    if selected_sources > 1:
+        raise ValueError(
+            "Use only one of --prompt, "
+            "--prompt-file or --prompt-profile"
+        )
+
     if args.prompt is not None:
         prompt = args.prompt.strip()
 
         if not prompt:
+            raise ValueError("Prompt cannot be empty")
+
+        return prompt
+
+    if args.prompt_file is not None:
+        prompt_path = Path(
+            args.prompt_file
+        ).expanduser()
+
+        if not prompt_path.is_file():
+            raise FileNotFoundError(
+                f"Prompt file not found: {prompt_path}"
+            )
+
+        prompt = prompt_path.read_text(
+            encoding="utf-8"
+        ).strip()
+
+        if not prompt:
             raise ValueError(
-                "Prompt cannot be empty"
+                f"Prompt file is empty: {prompt_path}"
             )
 
         return prompt
 
-    if args.prompt_file is None:
-        return None
-
-    prompt_path = Path(
-        args.prompt_file
-    ).expanduser()
-
-    if not prompt_path.exists():
-        raise FileNotFoundError(
-            f"Prompt file not found: {prompt_path}"
+    if args.prompt_profile is not None:
+        return PromptProfileManager().resolve_prompt(
+            args.prompt_profile
         )
 
-    if not prompt_path.is_file():
-        raise ValueError(
-            f"Prompt path is not a file: {prompt_path}"
-        )
-
-    prompt = prompt_path.read_text(
-        encoding="utf-8"
-    ).strip()
-
-    if not prompt:
-        raise ValueError(
-            f"Prompt file is empty: {prompt_path}"
-        )
-
-    return prompt
+    return None
 
 def main(argv=None):
     parser = build_parser()

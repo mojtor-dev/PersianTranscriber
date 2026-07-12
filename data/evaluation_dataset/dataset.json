@@ -1,0 +1,12 @@
+{
+  "name": "persiantranscriber-evaluation",
+  "version": 1,
+  "samples": [
+    {
+      "id": "test-fa-technical",
+      "audio": "test_fa.mp3",
+      "reference": "data/references/test_fa_reference.txt",
+      "content_type": "technical"
+    }
+  ]
+}

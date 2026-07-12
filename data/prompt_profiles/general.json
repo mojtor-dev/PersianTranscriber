@@ -1,0 +1,6 @@
+{
+  "name": "general",
+  "description": "گفتار عمومی فارسی",
+  "prompt": "این یک گفت‌وگوی طبیعی و روان به زبان فارسی است.",
+  "content_types": ["general", "conversation", "daily"]
+}
