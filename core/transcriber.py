@@ -1,6 +1,6 @@
 """
 PersianTranscriber Transcriber Engine
-Version: 0.2.0
+Version: 0.3.0
 """
 
 from core.engine_manager import EngineManager
@@ -15,6 +15,7 @@ class TranscriberEngine:
         language=None,
         threads=None,
         timeout_seconds=None,
+        initial_prompt=None,
     ):
         self.manager = EngineManager(
             engine_name=engine_name,
@@ -22,6 +23,7 @@ class TranscriberEngine:
             language=language,
             threads=threads,
             timeout_seconds=timeout_seconds,
+            initial_prompt=initial_prompt,
         )
 
         self.engine = self.manager.get_engine()

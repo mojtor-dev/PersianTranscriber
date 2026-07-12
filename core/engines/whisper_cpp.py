@@ -1,6 +1,6 @@
 """
 PersianTranscriber Whisper.cpp Engine
-Version: 0.5.0
+Version: 0.6.0
 """
 
 import os
@@ -13,9 +13,6 @@ from core.config_loader import ConfigLoader
 class WhisperCppEngine:
     """
     اجرای محلی whisper.cpp و تبدیل فایل صوتی به متن.
-
-    مسیر پیش‌فرض پروژه از محل همین فایل محاسبه می‌شود تا موتور
-    به نام پوشه‌ی Home یا مسیر ثابت Termux وابسته نباشد.
     """
 
     DEFAULT_TIMEOUT_SECONDS = 60 * 60
@@ -29,6 +26,7 @@ class WhisperCppEngine:
         model_path=None,
         threads=None,
         timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
+        initial_prompt=None,
     ):
         config = ConfigLoader()
 
@@ -55,12 +53,13 @@ class WhisperCppEngine:
             timeout_seconds
         )
 
+        self.initial_prompt = self._validate_prompt(
+            initial_prompt
+        )
+
         self.loaded = False
 
     def load(self):
-        """
-        وجود و قابل‌اجرا بودن whisper-cli و فایل مدل را بررسی می‌کند.
-        """
         if not self.whisper_bin.exists():
             raise FileNotFoundError(
                 "whisper-cli not found: "
@@ -93,20 +92,26 @@ class WhisperCppEngine:
 
         self.loaded = True
 
+        prompt_status = (
+            "enabled"
+            if self.initial_prompt
+            else "disabled"
+        )
+
         print(
             "Whisper.cpp ready "
             f"(model={self.model}, "
             f"language={self.language}, "
-            f"threads={self.threads})"
+            f"threads={self.threads}, "
+            f"prompt={prompt_status})"
         )
 
         return True
 
     def transcribe(self, audio_path):
-        """
-        فایل صوتی را با whisper-cli پردازش می‌کند.
-        """
-        source_path = Path(audio_path).expanduser()
+        source_path = Path(
+            audio_path
+        ).expanduser()
 
         if not source_path.exists():
             raise FileNotFoundError(
@@ -165,10 +170,7 @@ class WhisperCppEngine:
         }
 
     def build_command(self, audio_path):
-        """
-        فرمان whisper-cli را برای اجرا می‌سازد.
-        """
-        return [
+        command = [
             str(self.whisper_bin),
             "-m",
             str(self.model_path),
@@ -181,15 +183,33 @@ class WhisperCppEngine:
             "-nt",
         ]
 
+        if self.initial_prompt:
+            command.extend(
+                [
+                    "--prompt",
+                    self.initial_prompt,
+                ]
+            )
+
+        return command
+
     def _resolve_project_root(self, project_root):
         if project_root is not None:
-            return Path(project_root).expanduser().resolve()
+            return (
+                Path(project_root)
+                .expanduser()
+                .resolve()
+            )
 
         return Path(__file__).resolve().parents[2]
 
     def _resolve_whisper_binary(self, whisper_bin):
         if whisper_bin is not None:
-            return Path(whisper_bin).expanduser().resolve()
+            return (
+                Path(whisper_bin)
+                .expanduser()
+                .resolve()
+            )
 
         candidates = [
             (
@@ -216,7 +236,11 @@ class WhisperCppEngine:
 
     def _resolve_model_path(self, model_path):
         if model_path is not None:
-            return Path(model_path).expanduser().resolve()
+            return (
+                Path(model_path)
+                .expanduser()
+                .resolve()
+            )
 
         configured_model = Path(
             str(self.model)
@@ -246,6 +270,7 @@ class WhisperCppEngine:
     def _resolve_threads(threads):
         if threads is None:
             available_cpus = os.cpu_count() or 1
+
             return max(
                 1,
                 min(available_cpus, 6),
@@ -274,3 +299,22 @@ class WhisperCppEngine:
             )
 
         return timeout_seconds
+
+    @staticmethod
+    def _validate_prompt(initial_prompt):
+        if initial_prompt is None:
+            return None
+
+        if not isinstance(initial_prompt, str):
+            raise ValueError(
+                "initial_prompt must be a string"
+            )
+
+        normalized_prompt = initial_prompt.strip()
+
+        if not normalized_prompt:
+            raise ValueError(
+                "initial_prompt cannot be empty"
+            )
+
+        return normalized_prompt

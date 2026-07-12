@@ -1,6 +1,6 @@
 """
 PersianTranscriber Engine Manager
-Version: 0.2.0
+Version: 0.3.0
 """
 
 from core.config_loader import ConfigLoader
@@ -17,6 +17,7 @@ class EngineManager:
         language=None,
         threads=None,
         timeout_seconds=None,
+        initial_prompt=None,
     ):
         self.config = ConfigLoader()
 
@@ -38,6 +39,7 @@ class EngineManager:
         whisper_cpp_options = {
             "model": self.model,
             "language": self.language,
+            "initial_prompt": initial_prompt,
         }
 
         if threads is not None:

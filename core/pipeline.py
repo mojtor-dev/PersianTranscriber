@@ -34,6 +34,7 @@ class TranscriptionPipeline:
         chunk_duration_seconds=300,
         output_dir="output",
         output_format="both",
+        initial_prompt=None,
     ):
         if (
             output_format
@@ -52,6 +53,7 @@ class TranscriptionPipeline:
             language=language,
             threads=threads,
             timeout_seconds=timeout_seconds,
+            initial_prompt=initial_prompt,
         )
 
         self.cleaner = TextCleaner()

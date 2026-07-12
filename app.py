@@ -111,6 +111,23 @@ def build_parser():
         help="create only DOCX output",
     )
 
+    prompt_group = (
+        parser.add_mutually_exclusive_group()
+    )
+
+    prompt_group.add_argument(
+        "--prompt",
+        help=(
+            "initial Whisper prompt text; "
+            "use it as vocabulary and writing-style context"
+        ),
+    )
+
+    prompt_group.add_argument(
+        "--prompt-file",
+        help="UTF-8 file containing the initial Whisper prompt",
+    )
+
     parser.add_argument(
         "--version",
         action="version",
@@ -132,6 +149,46 @@ def resolve_output_format(args):
 
     return "both"
 
+
+
+def resolve_initial_prompt(args):
+    if args.prompt is not None:
+        prompt = args.prompt.strip()
+
+        if not prompt:
+            raise ValueError(
+                "Prompt cannot be empty"
+            )
+
+        return prompt
+
+    if args.prompt_file is None:
+        return None
+
+    prompt_path = Path(
+        args.prompt_file
+    ).expanduser()
+
+    if not prompt_path.exists():
+        raise FileNotFoundError(
+            f"Prompt file not found: {prompt_path}"
+        )
+
+    if not prompt_path.is_file():
+        raise ValueError(
+            f"Prompt path is not a file: {prompt_path}"
+        )
+
+    prompt = prompt_path.read_text(
+        encoding="utf-8"
+    ).strip()
+
+    if not prompt:
+        raise ValueError(
+            f"Prompt file is empty: {prompt_path}"
+        )
+
+    return prompt
 
 def main(argv=None):
     parser = build_parser()
@@ -162,19 +219,32 @@ def main(argv=None):
         return 2
 
     try:
-        pipeline = TranscriptionPipeline(
-            engine_name=args.engine,
-            model=args.model,
-            language=args.language,
-            threads=args.threads,
-            timeout_seconds=args.timeout,
-            chunk_duration_seconds=(
+        pipeline_options = {
+            "engine_name": args.engine,
+            "model": args.model,
+            "language": args.language,
+            "threads": args.threads,
+            "timeout_seconds": args.timeout,
+            "chunk_duration_seconds": (
                 args.chunk_duration
             ),
-            output_dir=args.output_dir,
-            output_format=(
+            "output_dir": args.output_dir,
+            "output_format": (
                 resolve_output_format(args)
             ),
+        }
+
+        initial_prompt = resolve_initial_prompt(
+            args
+        )
+
+        if initial_prompt is not None:
+            pipeline_options[
+                "initial_prompt"
+            ] = initial_prompt
+
+        pipeline = TranscriptionPipeline(
+            **pipeline_options
         )
 
         outputs = pipeline.run(
