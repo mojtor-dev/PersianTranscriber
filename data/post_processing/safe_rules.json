@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "rules": [
+    {"id":"repeat-comma","description":"Collapse repeated Persian commas","category":"punctuation","pattern":"،{2,}","replacement":"،"},
+    {"id":"repeat-question","description":"Collapse repeated Persian question marks","category":"punctuation","pattern":"؟{2,}","replacement":"؟"},
+    {"id":"repeat-exclamation","description":"Collapse repeated exclamation marks","category":"punctuation","pattern":"!{2,}","replacement":"!"},
+    {"id":"space-before-punctuation","description":"Remove spaces before punctuation","category":"spacing","pattern":"\\s+([،؛:؟!,.])","replacement":"\\1"},
+    {"id":"space-after-punctuation","description":"Add a space after punctuation","category":"spacing","pattern":"([،؛:؟!,.])(?=[^\\s\\n،؛:؟!,.])","replacement":"\\1 "},
+    {"id":"horizontal-space","description":"Collapse repeated horizontal whitespace","category":"spacing","pattern":"[ \\t]{2,}","replacement":" "},
+    {"id":"leading-line-space","description":"Trim leading line whitespace","category":"formatting","pattern":"(?m)^[ \\t]+","replacement":""},
+    {"id":"trailing-line-space","description":"Trim trailing line whitespace","category":"formatting","pattern":"(?m)[ \\t]+$","replacement":""},
+    {"id":"empty-lines","description":"Limit repeated empty lines","category":"formatting","pattern":"\\n{3,}","replacement":"\\n\\n"},
+    {"id":"percent-space","description":"Remove space before Persian percent sign","category":"orthography","pattern":"\\s+٪","replacement":"٪"}
+  ]
+}

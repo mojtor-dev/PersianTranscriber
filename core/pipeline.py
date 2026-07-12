@@ -11,6 +11,7 @@ from core.docx_exporter import DocxExporter
 from core.logger import AppLogger
 from core.persian_normalizer import PersianNormalizer
 from core.progress import ProgressManager
+from core.post_processing import PersianPostProcessor
 from core.text_exporter import TextExporter
 from core.text_merger import TextMerger
 from core.transcriber import TranscriberEngine
@@ -59,6 +60,11 @@ class TranscriptionPipeline:
         self.cleaner = TextCleaner()
         self.normalizer = PersianNormalizer()
         self.dictionary = DictionaryEngine()
+        self.post_processor = PersianPostProcessor(
+            cleaner=self.cleaner,
+            normalizer=self.normalizer,
+            dictionary=self.dictionary,
+        )
 
         self.splitter = AudioSplitter(
             chunk_duration_seconds=(
@@ -151,6 +157,35 @@ class TranscriptionPipeline:
             raise
 
     def _post_process_text(self, raw_text):
+        post_processor = getattr(
+            self,
+            "post_processor",
+            None,
+        )
+
+        if post_processor is not None:
+            clean_text, report = (
+                post_processor.process(
+                    raw_text
+                )
+            )
+
+            if report.dictionary_replacements > 0:
+                self.logger.write(
+                    "DICTIONARY "
+                    f"replacements={report.dictionary_replacements} "
+                    f"rules={report.dictionary_rules}"
+                )
+
+            if report.rule_replacements > 0:
+                self.logger.write(
+                    "POST_PROCESSOR "
+                    f"replacements={report.rule_replacements} "
+                    f"rules={report.rule_matches}"
+                )
+
+            return clean_text
+
         clean_text = self.cleaner.clean(
             raw_text
         )
@@ -159,17 +194,17 @@ class TranscriptionPipeline:
             clean_text
         )
 
-        clean_text, report = (
+        clean_text, dictionary_report = (
             self.dictionary.correct_with_report(
                 clean_text
             )
         )
 
-        if report["replacement_count"] > 0:
+        if dictionary_report["replacement_count"] > 0:
             self.logger.write(
                 "DICTIONARY "
-                f"replacements={report['replacement_count']} "
-                f"rules={report['matched_rules']}"
+                f"replacements={dictionary_report['replacement_count']} "
+                f"rules={dictionary_report['matched_rules']}"
             )
 
         return clean_text
